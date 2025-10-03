@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import OneHotEncoder
 
 COSTS = {
     "Moneycard": {"success": 5, "failed": 2},
@@ -9,7 +10,7 @@ COSTS = {
 }
 TIME_FEATURES = {"day": 31, "dow": 7, "hour": 24}
 
-df = pd.read_excel("data.xlsx")
+df = pd.read_excel("data/data.xlsx")
 df = df.drop(columns=["Unnamed: 0"])
 
 
@@ -68,6 +69,20 @@ def process_data(processed: pd.DataFrame = df) -> pd.DataFrame:
         False,
     )
     # Anzahl aufeinanderfolgende failed unterschiedlicher Umsätze
+
+    # kategorische Merkmale encodieren
+    cat_features = processed[["country", "PSP"]]
+    one_hot_encoder = OneHotEncoder(sparse_output=False)
+    encoded_array = one_hot_encoder.fit_transform(cat_features)
+    encoded_columns = one_hot_encoder.get_feature_names_out(cat_features.columns)
+    encoded_df = pd.DataFrame(
+        encoded_array, columns=encoded_columns, index=processed.index
+    )
+    processed = pd.concat([processed, encoded_df], axis=1)
+
+    # Timestamp entfernen
+    processed = processed.drop(columns=["tmsp"])
+
     return processed
 
 

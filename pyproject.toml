@@ -1,12 +1,14 @@
 [project]
 name = "fallstudie"
 version = "1.0"
-description = "uni: fallstudie Model Engineering"
+description = "IU Master Data Science: fallstudie Model Engineering"
 authors = [
-    {name = "Erik R"}
+    {name = "Erik Reitsam"}
 ]
+
 license = {text = "-"}
 readme = "README.md"
+package-mode = false
 requires-python = ">=3.13"
 dependencies = [
     "pandas (>=2.3.3,<3.0.0)",
