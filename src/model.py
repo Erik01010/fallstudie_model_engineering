@@ -1,40 +1,30 @@
 import pandas as pd
-from feature_engineering import process_data
+from sklearn.metrics import accuracy_score
+
 from sklearn import tree
 from sklearn.model_selection import train_test_split
+import joblib
+from config import DATA_PATH, MODEL_PATH
+from evaluation import select_best_psp
 
 
-def calc_success_rate(df: pd.DataFrame) -> float:
-    return round(df["success"].mean() * 100, 2)
-
-
-def calc_avg_transaction_costs(df: pd.DataFrame) -> float:
-    return round(df["cost"].mean(), 2)
-
-
-data = process_data()
-y = data["success", "PSP"]
-X = data.drop(columns=["success", "PSP"])
+df = pd.read_csv(filepath_or_buffer=DATA_PATH)
+y = df["success"]
+X = df.drop(columns=["success"], axis=1)
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-decision_tree_model = tree.DecisionTreeClassifier(random_state=42)
-decision_tree_model.fit(X_train, y_train)
-preds = decision_tree_model.predict(X_test)
+baseline_model = tree.DecisionTreeClassifier(random_state=42)
+baseline_model.fit(X_train, y_train)
+y_pred_test = baseline_model.predict(X_test)
 
+accuracy = accuracy_score(y_test, y_pred_test)
+joblib.dump(baseline_model, MODEL_PATH)
 
-class BaseLineModel:
-    """Class for Baseline model."""
+print(f"Model accuracy: {accuracy:.4f}")
 
-    def __init__(self):
-        self.model = tree.DecisionTreeClassifier(random_state=42)
-        self.model.fit(X_train, y_train)
-        self.model.predict(X_test)
-
-
-if __name__ == "__main__":
-    df = process_data()
-    print(calc_success_rate(df=df))
-    print(calc_avg_transaction_costs(df=df))
+sample_transaction = X_test.iloc[0]
+best_psp, min_cost = select_best_psp(sample_transaction, baseline_model)
+print(f"Best PSP for the sample transaction: {best_psp} with expected cost:{min_cost:.2f}")
