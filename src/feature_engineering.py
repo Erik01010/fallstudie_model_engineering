@@ -1,20 +1,12 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
-
-COSTS = {
-    "Moneycard": {"success": 5, "failed": 2},
-    "Goldcard": {"success": 10, "failed": 5},
-    "UK_Card": {"success": 3, "failed": 1},
-    "Simplecard": {"success": 1, "failed": 0.5},
-}
-TIME_FEATURES = {"day": 31, "dow": 7, "hour": 24}
-
-df = pd.read_excel("data/data.xlsx")
-df = df.drop(columns=["Unnamed: 0"])
+from config import TIME_FEATURES, COSTS
 
 
-def process_data(processed: pd.DataFrame = df) -> pd.DataFrame:
+
+
+def process_data(processed: pd.DataFrame) -> pd.DataFrame:
     """Drop duplicates and generate Features."""
     processed = processed.drop_duplicates()
     processed = processed.copy()
@@ -38,12 +30,8 @@ def process_data(processed: pd.DataFrame = df) -> pd.DataFrame:
         processed[f"{key}_cos"] = np.cos(2 * np.pi * processed[key] / value)
 
     # Kosten
-    processed["cost"] = processed.apply(
-        lambda row: COSTS[row["PSP"]]["success"]
-        if row["success"]
-        else COSTS[row["PSP"]]["failed"],
-        axis=1,
-    )
+    processed['cost_if_success'] = processed['PSP'].map(lambda psp: COSTS[psp]['success'])
+    processed['cost_if_failure'] = processed['PSP'].map(lambda psp: COSTS[psp]['failure'])
 
     # Wiederholte Transaktionsversuche aufgrund fehlgeschlagener Transaktionen
     processed["timedelta"] = (
@@ -71,7 +59,7 @@ def process_data(processed: pd.DataFrame = df) -> pd.DataFrame:
     # Anzahl aufeinanderfolgende failed unterschiedlicher Umsätze
 
     # kategorische Merkmale encodieren
-    cat_features = processed[["country", "PSP"]]
+    cat_features = processed[["country", "card", "PSP"]]
     one_hot_encoder = OneHotEncoder(sparse_output=False)
     encoded_array = one_hot_encoder.fit_transform(cat_features)
     encoded_columns = one_hot_encoder.get_feature_names_out(cat_features.columns)
@@ -80,13 +68,16 @@ def process_data(processed: pd.DataFrame = df) -> pd.DataFrame:
     )
     processed = pd.concat([processed, encoded_df], axis=1)
 
-    # Timestamp entfernen
-    processed = processed.drop(columns=["tmsp"])
+    # Timestamp und nicht kategorische features entfernen
+    processed = processed.drop(columns=["tmsp", "country", "card", "PSP"])
 
     return processed
 
 
 if __name__ == "__main__":
-    pd.set_option("display.max_columns", None)
-    df = process_data()
-    print(df)
+    """Main function to process data and save to excel."""
+    raw = pd.read_excel("../data/data.xlsx")
+    raw = raw.drop(columns=["Unnamed: 0"])
+
+    data = process_data(raw)
+    data.to_csv("../data/processed_data.csv", index=False)
