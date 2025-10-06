@@ -1,8 +1,7 @@
 import pandas as pd
+from predictions import calculate_expected_costs
 from sklearn.metrics import accuracy_score
 from sklearn.tree import DecisionTreeClassifier
-
-from predictions import calculate_expected_costs
 
 
 def calculate_total_cost(

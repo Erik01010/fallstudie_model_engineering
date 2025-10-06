@@ -1,10 +1,17 @@
+import joblib
 import pandas as pd
-from sklearn.metrics import accuracy_score
-
+from config import MODEL_PATH
 from sklearn import tree
 from sklearn.model_selection import train_test_split
-import joblib
-from config import MODEL_PATH
+from sklearn.preprocessing import OneHotEncoder
+
+
+def train_ohc_encoder(data: pd.DataFrame) -> OneHotEncoder:
+    """Trains and saves a OneHotEncoder for categorical features."""
+    one_hot_encoder = OneHotEncoder(sparse_output=False)
+    one_hot_encoder.fit_transform(data)
+    joblib.dump(one_hot_encoder, "models/one_hot_encoder.joblib")
+    return one_hot_encoder
 
 
 def split_features_and_target(
@@ -30,10 +37,6 @@ def train_decision_tree(
     """Trains a Decision Tree Classifier and evaluates its accuracy."""
     baseline_model = tree.DecisionTreeClassifier(max_depth=5, random_state=42)
     baseline_model.fit(X_train, y_train)
-    y_pred_test = baseline_model.predict(X_test)
-
-    accuracy = accuracy_score(y_test, y_pred_test)
     joblib.dump(baseline_model, MODEL_PATH)
 
-    print(f"Model accuracy: {accuracy:.4f}")
     return baseline_model
