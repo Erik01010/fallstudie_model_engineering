@@ -7,8 +7,8 @@ import joblib
 
 def engineer_features(data: pd.DataFrame) -> pd.DataFrame:
     """Drop duplicates and generate Features."""
-    data = data.drop_duplicates()
     data = data.copy()
+    data = data.drop_duplicates()
 
     # Informationen aus Zeitstempel extrahieren
     data["month"] = data.loc[:, "tmsp"].dt.month.astype("int64")
@@ -29,21 +29,15 @@ def engineer_features(data: pd.DataFrame) -> pd.DataFrame:
         data[f"{key}_cos"] = np.cos(2 * np.pi * data[key] / value)
 
     # Kosten
-    data["cost_if_success"] = data["PSP"].map(
-        lambda psp: PSP_COSTS[psp]["success"]
-    )
-    data["cost_if_failure"] = data["PSP"].map(
-        lambda psp: PSP_COSTS[psp]["failure"]
-    )
+    data["cost_if_success"] = data["PSP"].map(lambda psp: PSP_COSTS[psp]["success"])
+    data["cost_if_failure"] = data["PSP"].map(lambda psp: PSP_COSTS[psp]["failure"])
 
     # Wiederholte Transaktionsversuche aufgrund fehlgeschlagener Transaktionen
-    data["timedelta"] = (
-        data["tmsp"].diff().dt.total_seconds().fillna(0).astype("int64")
-    )
+    data["timedelta"] = data["tmsp"].diff().dt.total_seconds().fillna(0).astype("int64")
     cols_to_compare = ["country", "amount", "3D_secured", "card"]
-    data["is_retry"] = (
-        data[cols_to_compare] == data[cols_to_compare].shift(1)
-    ).all(axis=1)
+    data["is_retry"] = (data[cols_to_compare] == data[cols_to_compare].shift(1)).all(
+        axis=1
+    )
 
     # Anzahl kontinuierlicher Retry Versuche
     retry_groups = (~data["is_retry"]).cumsum()
@@ -59,7 +53,6 @@ def engineer_features(data: pd.DataFrame) -> pd.DataFrame:
         True,
         False,
     )
-    # Anzahl aufeinanderfolgende failed unterschiedlicher Umsätze
 
     # kategorische Merkmale encodieren
     cat_features = data[["country", "card", "PSP"]]
@@ -67,12 +60,10 @@ def engineer_features(data: pd.DataFrame) -> pd.DataFrame:
     encoded_array = one_hot_encoder.fit_transform(cat_features)
     joblib.dump(one_hot_encoder, "models/one_hot_encoder.joblib")
     encoded_columns = one_hot_encoder.get_feature_names_out(cat_features.columns)
-    encoded_df = pd.DataFrame(
-        encoded_array, columns=encoded_columns, index=data.index
-    )
+    encoded_df = pd.DataFrame(encoded_array, columns=encoded_columns, index=data.index)
     data = pd.concat([data, encoded_df], axis=1)
 
     # Timestamp und nicht kategorische features entfernen
-    data = data.drop(columns=["tmsp", "PSP"])
+    data = data.drop(columns=["tmsp", "PSP", "country", "card"], axis=1)
 
     return data

@@ -5,7 +5,7 @@ def load_dataset(path: str) -> pd.DataFrame:
     """Load data from a file."""
     if path.endswith(".csv"):
         return pd.read_csv(path)
-    return pd.read_excel(path)
+    return pd.read_excel(path, index_col=0)
 
 
 def save_dataset(data: pd.DataFrame, path: str) -> None:
