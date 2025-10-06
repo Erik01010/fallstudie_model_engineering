@@ -7,16 +7,28 @@ import joblib
 from config import MODEL_PATH
 
 
-def train_decision_tree(data: pd.DataFrame) -> tree.DecisionTreeClassifier:
+def split_features_and_target(
+    data: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    """Splits the dataset into features and target variable."""
     y = data["success"]
-    X = data.drop(columns=["success", "country", "card"], axis=1)
+    X = data.drop(columns=["success"], axis=1)
     joblib.dump(X.columns, "models/columns.joblib")
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
+    return X_train, X_test, y_train, y_test
 
-    baseline_model = tree.DecisionTreeClassifier(random_state=42)
+
+def train_decision_tree(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_test: pd.Series,
+) -> tree.DecisionTreeClassifier:
+    """Trains a Decision Tree Classifier and evaluates its accuracy."""
+    baseline_model = tree.DecisionTreeClassifier(max_depth=5, random_state=42)
     baseline_model.fit(X_train, y_train)
     y_pred_test = baseline_model.predict(X_test)
 
