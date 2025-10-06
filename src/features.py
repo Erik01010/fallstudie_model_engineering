@@ -1,11 +1,10 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+from config import CAT_FEATURES, CYCLICAL_FEATURES, PSP_COSTS
 from sklearn.preprocessing import OneHotEncoder
-from config import CYCLICAL_FEATURES, PSP_COSTS
-import joblib
 
 
-def engineer_features(data: pd.DataFrame) -> pd.DataFrame:
+def engineer_features(data: pd.DataFrame, ohc: OneHotEncoder) -> pd.DataFrame:
     """Drop duplicates and generate Features."""
     data = data.copy()
     data = data.drop_duplicates()
@@ -17,10 +16,8 @@ def engineer_features(data: pd.DataFrame) -> pd.DataFrame:
     data["dow"] = data.loc[:, "tmsp"].dt.dayofweek.astype("int64")
     data["hour"] = data.loc[:, "tmsp"].dt.hour.astype("int64")
     data["second"] = data.loc[:, "tmsp"].dt.second.astype("int64")
-    data["is_weekend"] = np.where(data["dow"] >= 5, True, False)
-    data["is_business_hours"] = np.where(
-        (data["hour"] >= 8) & (data["hour"] < 20), True, False
-    )
+    data["is_weekend"] = data["dow"] >= 5
+    data["is_business_hours"] = (data["hour"] >= 8) & (data["hour"] < 20)
 
     # Zeit-Features zyklisch kodieren
     # week und month nicht zyklisch kodieren da kein Zyklusübergang
@@ -46,20 +43,13 @@ def engineer_features(data: pd.DataFrame) -> pd.DataFrame:
     )
 
     # Wechsel PSP bei Retry
-    data["PSP_switch"] = False
-    data["PSP_switch"] = np.where(
-        (data["is_retry"]) & (data["PSP"] != data["PSP"].shift(1))
-        | data["is_retry"] & (data["PSP_switch"].shift(1)),
-        True,
-        False,
+    data["PSP_switch"] = data.groupby(retry_groups)["PSP"].transform(
+        lambda x: (x != x.shift()).fillna(False).cumsum() > 0
     )
 
     # kategorische Merkmale encodieren
-    cat_features = data[["country", "card", "PSP"]]
-    one_hot_encoder = OneHotEncoder(sparse_output=False)
-    encoded_array = one_hot_encoder.fit_transform(cat_features)
-    joblib.dump(one_hot_encoder, "models/one_hot_encoder.joblib")
-    encoded_columns = one_hot_encoder.get_feature_names_out(cat_features.columns)
+    encoded_array = ohc.transform(data[CAT_FEATURES])
+    encoded_columns = ohc.get_feature_names_out(CAT_FEATURES)
     encoded_df = pd.DataFrame(encoded_array, columns=encoded_columns, index=data.index)
     data = pd.concat([data, encoded_df], axis=1)
 

@@ -1,11 +1,8 @@
 import joblib
 import pandas as pd
+from config import PSP_COSTS
 from sklearn.tree import DecisionTreeClassifier
 
-from config import PSP_COSTS
-
-# Load pre-fitted encoder and training columns
-one_hot_encoder = joblib.load("models/one_hot_encoder.joblib")
 columns = joblib.load("models/columns.joblib")
 
 
@@ -48,17 +45,3 @@ def calculate_expected_costs(
         )
 
     return expected_costs_df
-
-
-def find_best_psp(
-    transaction: pd.Series, model: DecisionTreeClassifier
-) -> tuple[str, float]:
-    """Finds the best PSP for a single transaction."""
-    transaction_df = transaction.to_frame().T
-
-    expected_costs = calculate_expected_costs(transaction_df, model)
-
-    best_psp = expected_costs.idxmin(axis=1).iloc[0]
-    min_cost = expected_costs.min(axis=1).iloc[0].astype(float)
-
-    return best_psp, min_cost
