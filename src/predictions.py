@@ -1,47 +1,97 @@
-from config import PSP_COSTS
 import joblib
 import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
 
+from config import PSP_COSTS
+
+# Load pre-fitted encoder and training columns
 one_hot_encoder = joblib.load("models/one_hot_encoder.joblib")
 columns = joblib.load("models/columns.joblib")
 
 
-def find_best_psp(transaction: pd.Series, model) -> tuple[str, float]:
-    expected_costs = {}
+def _prepare_features_for_psp(
+    transactions: pd.DataFrame, psp: str, psp_ohe_columns: list[str]
+) -> pd.DataFrame:
+    """
+    Prepares a feature set for a given PSP.
 
-    features = transaction.copy()
+    Args:
+        transactions: The input transactions.
+        psp: The PSP to prepare features for.
+        psp_ohe_columns: A list of one-hot encoded PSP column names.
 
-    for psp in ["Moneycard", "Goldcard", "UK_Card", "Simplecard"]:
-        features["cost_if_success"] = PSP_COSTS[psp]["success"]
-        features["cost_if_failure"] = PSP_COSTS[psp]["failure"]
+    Returns:
+        A DataFrame ready for prediction.
+    """
+    features = transactions.copy()
 
-        # Create a copy of the transaction to modify PSP features
-        features_for_prediction = transaction.copy().to_frame().T
+    # Set cost features for the given PSP
+    features["cost_if_success"] = PSP_COSTS[psp]["success"]
+    features["cost_if_failure"] = PSP_COSTS[psp]["failure"]
 
-        # Set all PSP one-hot encoded columns to 0
-        for col in one_hot_encoder.get_feature_names_out(["country", "card", "PSP"]):
-            if "PSP_" in col:
-                features_for_prediction[col] = 0
+    # Simulate the choice of the PSP
+    for col in psp_ohe_columns:
+        if col in features.columns:
+            features[col] = 0
+    features[f"PSP_{psp}"] = 1
 
-        # Set the current PSP one-hot encoded column to 1
-        psp_col_name = f"PSP_{psp}"
-        if psp_col_name in features_for_prediction.columns:
-            features_for_prediction[psp_col_name] = 1
-        else:
-            # If a PSP column is missing, add it and set to 1 (should not happen if encoder is consistent)
-            features_for_prediction[psp_col_name] = 1
+    # Re-align columns with the model's training data
+    return features.reindex(columns=columns, fill_value=0)
 
-        # Reindex to ensure column order matches training data
-        features_for_prediction = features_for_prediction.reindex(columns=columns, fill_value=0)
 
-        prob_success = model.predict_proba(features_for_prediction)[0, 1]
+def calculate_expected_costs(
+    transactions: pd.DataFrame, model: DecisionTreeClassifier
+) -> pd.DataFrame:
+    """
+    Calculates the expected cost for each transaction across all possible PSPs.
 
+    Args:
+        transactions: A DataFrame of transactions.
+        model: The trained model for predicting success probabilities.
+
+    Returns:
+        A DataFrame of expected costs, with transactions as rows and PSPs as
+        columns.
+    """
+    expected_costs_df = pd.DataFrame(index=transactions.index)
+    psp_ohe_columns = [
+        col
+        for col in one_hot_encoder.get_feature_names_out(["country", "card", "PSP"])
+        if "PSP_" in col
+    ]
+
+    for psp in PSP_COSTS:
+        # Prepare features for the current PSP
+        features = _prepare_features_for_psp(transactions, psp, psp_ohe_columns)
+
+        # Predict success probability
+        prob_success = model.predict_proba(features)[:, 1]
+
+        # Calculate and store the expected cost
         cost_success = PSP_COSTS[psp]["success"]
         cost_failure = PSP_COSTS[psp]["failure"]
+        expected_costs_df[psp] = (
+            prob_success * cost_success + (1 - prob_success) * cost_failure
+        )
 
-        expected_cost = prob_success * cost_success + (1 - prob_success) * cost_failure
-        expected_costs[psp] = expected_cost
+    return expected_costs_df
 
-    best_psp = min(expected_costs, key=expected_costs.get)
 
-    return best_psp, expected_costs[best_psp]
+def find_best_psp(
+    transaction: pd.Series, model: DecisionTreeClassifier
+) -> tuple[str, float]:
+    """
+    Finds the best PSP for a single transaction.
+
+    Args:
+        transaction: A Series representing a single transaction.
+        model: The trained DecisionTreeClassifier model.
+
+    Returns:
+        A tuple with the best PSP's name and the minimum expected cost.
+    """
+    transaction_df = transaction.to_frame().T
+    expected_costs = calculate_expected_costs(transaction_df, model)
+    best_psp = expected_costs.idxmin(axis=1).iloc[0]
+    min_cost = expected_costs.min(axis=1).iloc[0]
+    return best_psp, min_cost
