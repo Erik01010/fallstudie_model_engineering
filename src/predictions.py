@@ -1,47 +1,47 @@
-from config import PSP_COSTS
 import joblib
 import pandas as pd
+from config import PSP_COSTS
+from sklearn.tree import DecisionTreeClassifier
 
-one_hot_encoder = joblib.load("models/one_hot_encoder.joblib")
 columns = joblib.load("models/columns.joblib")
 
 
-def find_best_psp(transaction: pd.Series, model) -> tuple[str, float]:
-    expected_costs = {}
+def _prepare_features_for_psp(transactions: pd.DataFrame, psp: str) -> pd.DataFrame:
+    """Prepares a feature set for a given PSP."""
+    features = transactions.copy()
 
-    features = transaction.copy()
+    # Set cost features to corresponding PSP costs
+    features["cost_if_success"] = PSP_COSTS[psp]["success"]
+    features["cost_if_failure"] = PSP_COSTS[psp]["failure"]
 
-    for psp in ["Moneycard", "Goldcard", "UK_Card", "Simplecard"]:
-        features["cost_if_success"] = PSP_COSTS[psp]["success"]
-        features["cost_if_failure"] = PSP_COSTS[psp]["failure"]
+    psp_ohe_columns = [f"PSP_{psp}" for psp in PSP_COSTS.keys()]
 
-        # Create a copy of the transaction to modify PSP features
-        features_for_prediction = transaction.copy().to_frame().T
+    # Simulate the choice of the PSP
+    for col in psp_ohe_columns:
+        if col in features.columns:
+            features[col] = 0
+    features[f"PSP_{psp}"] = 1
 
-        # Set all PSP one-hot encoded columns to 0
-        for col in one_hot_encoder.get_feature_names_out(["country", "card", "PSP"]):
-            if "PSP_" in col:
-                features_for_prediction[col] = 0
+    # Re-align columns with the model's training data
+    return features.reindex(columns=columns, fill_value=0)
 
-        # Set the current PSP one-hot encoded column to 1
-        psp_col_name = f"PSP_{psp}"
-        if psp_col_name in features_for_prediction.columns:
-            features_for_prediction[psp_col_name] = 1
-        else:
-            # If a PSP column is missing, add it and set to 1 (should not happen if encoder is consistent)
-            features_for_prediction[psp_col_name] = 1
 
-        # Reindex to ensure column order matches training data
-        features_for_prediction = features_for_prediction.reindex(columns=columns, fill_value=0)
+def calculate_expected_costs(
+    transactions: pd.DataFrame, model: DecisionTreeClassifier
+) -> pd.DataFrame:
+    """Calculates the expected cost for each transaction across all possible PSPs."""
+    expected_costs_df = pd.DataFrame(index=transactions.index)
 
-        prob_success = model.predict_proba(features_for_prediction)[0, 1]
+    for psp in PSP_COSTS:
+        # Prepare features for the current PSP
+        features = _prepare_features_for_psp(transactions, psp)
 
-        cost_success = PSP_COSTS[psp]["success"]
-        cost_failure = PSP_COSTS[psp]["failure"]
+        # Predict success probability
+        prob_success = model.predict_proba(features)[:, 1]
 
-        expected_cost = prob_success * cost_success + (1 - prob_success) * cost_failure
-        expected_costs[psp] = expected_cost
+        expected_costs_df[psp] = (
+            prob_success * features["cost_if_success"]
+            + (1 - prob_success) * features["cost_if_failure"]
+        )
 
-    best_psp = min(expected_costs, key=expected_costs.get)
-
-    return best_psp, expected_costs[best_psp]
+    return expected_costs_df
