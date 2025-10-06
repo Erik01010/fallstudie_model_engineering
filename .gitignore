@@ -1,13 +1,11 @@
-<<<<<<< HEAD
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
-=======
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
->>>>>>> 0c72032 (add gitignore)
 *$py.class
 
 # C extensions
@@ -53,11 +51,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-<<<<<<< HEAD
 *.py.cover
-=======
-*.py,cover
->>>>>>> 0c72032 (add gitignore)
 .hypothesis/
 .pytest_cache/
 cover/
@@ -105,22 +99,18 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-<<<<<<< HEAD
 # UV
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
 #uv.lock
 
-=======
->>>>>>> 0c72032 (add gitignore)
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 #poetry.lock
-<<<<<<< HEAD
 #poetry.toml
 
 # pdm
@@ -139,7 +129,6 @@ ipython_config.py
 #   in the .venv directory. It is recommended not to include this directory in version control.
 .pixi
 
-=======
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
@@ -151,7 +140,6 @@ ipython_config.py
 .pdm-python
 .pdm-build/
 
->>>>>>> 0c72032 (add gitignore)
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
 
@@ -164,10 +152,7 @@ celerybeat.pid
 
 # Environments
 .env
-<<<<<<< HEAD
 .envrc
-=======
->>>>>>> 0c72032 (add gitignore)
 .venv
 env/
 venv/
@@ -206,7 +191,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-<<<<<<< HEAD
 # Abstra
 # Abstra is an AI-powered process automation framework.
 # Ignore directories containing user credentials, local state, and settings.
@@ -237,5 +221,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-=======
->>>>>>> 0c72032 (add gitignore)
+# Data files
+data/processed_data.csv
+
+# Model files
+models/
+
+# Python cache
+__pycache__/
+
