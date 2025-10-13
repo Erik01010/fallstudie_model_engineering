@@ -1,5 +1,5 @@
 [project]
-name = "fallstudie"
+name = "fallstudie_model_engineering"
 version = "1.0"
 description = "IU Master Data Science: fallstudie Model Engineering"
 authors = [
@@ -15,10 +15,13 @@ dependencies = [
     "numpy (>=2.3.3,<3.0.0)",
     "matplotlib (>=3.10.6,<4.0.0)",
     "openpyxl (>=3.1.5,<4.0.0)",
-    "scikit-learn (>=1.7.2,<2.0.0)"
+    "scikit-learn (>=1.7.2,<2.0.0)",
 ]
 
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+ignore_missing_imports = true

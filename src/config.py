@@ -1,5 +1,13 @@
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_PATH = BASE_DIR / "data" / "processed_data.csv"
+RAW_DATA_PATH = BASE_DIR / "data" / "data.xlsx"
+
+OHC_PATH = BASE_DIR / "models" / "one_hot_encoder.joblib"
+DECISION_TREE_PATH = BASE_DIR / "models" / "decision_tree.joblib"
+XGBOOST_PATH = BASE_DIR / "models" / "xgboost.joblib"
+
 PSP_COSTS = {
     "Moneycard": {"success": 5, "failure": 2},
     "Goldcard": {"success": 10, "failure": 5},
@@ -9,9 +17,3 @@ PSP_COSTS = {
 CAT_FEATURES = ["country", "card", "PSP"]
 
 CYCLICAL_FEATURES = {"day": 31, "dow": 7, "hour": 24}
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_PATH = BASE_DIR / "data" / "processed_data.csv"
-RAW_DATA_PATH = BASE_DIR / "data" / "data.xlsx"
-MODEL_PATH = BASE_DIR / "models" / "decision_tree_baseline.joblib"
-OHC_PATH = BASE_DIR / "models" / "one_hot_encoder.joblib"
