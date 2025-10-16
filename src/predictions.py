@@ -2,6 +2,7 @@ import pandas as pd
 from config import CAT_FEATURES, PSP_COSTS, OHC_PATH
 import joblib
 
+
 def calculate_success_probability(model, features: pd.DataFrame) -> float:
     """Calculates the success probability for a given model and features."""
     return model.predict_proba(features)[:, 1]
@@ -26,8 +27,8 @@ def _prepare_features_for_psp(transactions: pd.DataFrame, psp: str) -> pd.DataFr
     features[f"PSP_{psp}"] = 1
 
     # Re-align columns with the model's training data
-    # get columns!!!
-    return features.reindex(columns=columns, fill_value=0)
+    columns = transactions.columns.tolist()
+    return features.reindex(columns=transactions.columns, fill_value=0)
 
 
 def calculate_expected_costs(transactions: pd.DataFrame, model) -> pd.DataFrame:

@@ -1,4 +1,4 @@
-from config import CAT_FEATURES, RAW_DATA_PATH, OHC_PATH
+from config import CAT_FEATURES, RAW_DATA_PATH
 from features import engineer_features
 from metrics import calculate_total_cost
 from sklearn.model_selection import train_test_split
@@ -7,7 +7,7 @@ import pandas as pd
 from models import (
     train_decision_tree,
     train_ohc_encoder,
-    train_xgboost,
+    train_hgboost,
 )  # type: ignore
 
 
@@ -33,16 +33,15 @@ def run_pipeline() -> None:
 
     # Train model
     decision_tree_model = train_decision_tree(x_train=X_train, y_train=y_train)
-    xgboost_model = train_xgboost(x_train=X_train, y_train=y_train)
+    hgboost_model = train_hgboost(x_train=X_train, y_train=y_train)
 
     # Evaluate model
     print("Evaluating Decision Tree Model:")
     calculate_total_cost(x_test=X_test, model=decision_tree_model)
 
     print("Evaluating XGBoost Model:")
-    calculate_total_cost(x_test=X_test, model=xgboost_model)
+    calculate_total_cost(x_test=X_test, model=hgboost_model)
 
 
 if __name__ == "__main__":
     run_pipeline()
-    print(1)

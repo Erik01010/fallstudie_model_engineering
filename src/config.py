@@ -6,7 +6,7 @@ RAW_DATA_PATH = BASE_DIR / "data" / "data.xlsx"
 
 OHC_PATH = BASE_DIR / "models" / "one_hot_encoder.joblib"
 DECISION_TREE_PATH = BASE_DIR / "models" / "decision_tree.joblib"
-XGBOOST_PATH = BASE_DIR / "models" / "xgboost.joblib"
+HGBOOST_PATH = BASE_DIR / "models" / "xgboost.joblib"
 
 PSP_COSTS = {
     "Moneycard": {"success": 5, "failure": 2},
