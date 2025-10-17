@@ -6,13 +6,6 @@ from config import CAT_FEATURES, CYCLICAL_FEATURES, PSP_COSTS
 from sklearn.preprocessing import OneHotEncoder
 
 
-def load_dataset(path: Path) -> pd.DataFrame:
-    """Load data from a file."""
-    if path.suffix == ".csv":
-        return pd.read_csv(path)
-    return pd.read_excel(path, index_col=0)
-
-
 def engineer_features(data: pd.DataFrame, ohc: OneHotEncoder) -> pd.DataFrame:
     """Drop duplicates and generate Features."""
     data = data.copy()

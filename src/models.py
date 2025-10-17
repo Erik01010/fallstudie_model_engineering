@@ -7,12 +7,12 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import HistGradientBoostingClassifier
 
 
-
 def train_ohc_encoder(data: pd.DataFrame) -> OneHotEncoder:
     """Trains and saves a OneHotEncoder for categorical features."""
     one_hot_encoder = OneHotEncoder(sparse_output=False)
     one_hot_encoder.fit_transform(data)
     joblib.dump(one_hot_encoder, OHC_PATH)
+
     return one_hot_encoder
 
 
@@ -40,3 +40,8 @@ def train_hgboost(
     joblib.dump(hgboost_model, HGBOOST_PATH)
 
     return hgboost_model
+
+
+def calculate_success_probability(model, features: pd.DataFrame) -> float:
+    """Calculates the success probability for a given model and features."""
+    return model.predict_proba(features)[:, 1]
