@@ -1,12 +1,12 @@
-from pathlib import Path
-
-import pandas as pd
 import numpy as np
-from config import CAT_FEATURES, CYCLICAL_FEATURES, PSP_COSTS
+import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 
+from src.config import CAT_FEATURES, CYCLICAL_FEATURES, PSP_COSTS
+from src.models import train_ohc_encoder
 
-def engineer_features(data: pd.DataFrame, ohc: OneHotEncoder) -> pd.DataFrame:
+
+def engineer_features(data: pd.DataFrame) -> tuple[pd.DataFrame, OneHotEncoder]:
     """Drop duplicates and generate Features."""
     data = data.copy()
     data = data.drop_duplicates()
@@ -37,6 +37,7 @@ def engineer_features(data: pd.DataFrame, ohc: OneHotEncoder) -> pd.DataFrame:
     data["is_retry"] = (data[cols_to_compare] == data[cols_to_compare].shift(1)).all(
         axis=1
     )
+    data["is_retry"] = data["is_retry"] & (data["timedelta"] <= 60)
 
     # Anzahl kontinuierlicher Retry Versuche
     retry_groups = (~data["is_retry"]).cumsum()
@@ -49,13 +50,32 @@ def engineer_features(data: pd.DataFrame, ohc: OneHotEncoder) -> pd.DataFrame:
         lambda x: (x != x.shift()).fillna(False).cumsum() > 0
     )
 
+    data["amount_bins"] = pd.cut(
+        data["amount"],
+        bins=[0, 200, 400, float("inf")],
+        labels=["amount_under_200", "amount_200_400", "amount_over_400"],
+        right=False,
+    )
+
+    # Feature interaktion: PSP und Country
+    data["interaction_psp_country"] = data["PSP"] + "_" + data["country"]
+    data["interaction_psp_card"] = data["PSP"] + "_" + data["card"]
+    data["interaction_psp_amount_bin"] = (
+        data["PSP"] + "_" + data["amount_bins"].astype(str)
+    )
+    data["interaction_psp_3D_secured"] = (
+        data["PSP"] + "_" + data["3D_secured"].astype(str)
+    )
+
     # kategorische Merkmale encodieren
+    ohc = train_ohc_encoder(data=data[CAT_FEATURES])
     encoded_array = ohc.transform(data[CAT_FEATURES])
     encoded_columns = ohc.get_feature_names_out(CAT_FEATURES)
     encoded_df = pd.DataFrame(encoded_array, columns=encoded_columns, index=data.index)
     data = pd.concat([data, encoded_df], axis=1)
 
     # Timestamp und nicht kategorische features entfernen
-    data = data.drop(columns=["tmsp", "PSP", "country", "card"], axis=1)
+    cat_features = CAT_FEATURES + ["tmsp"]
+    data = data.drop(columns=cat_features, axis=1)
 
-    return data
+    return (data, ohc)

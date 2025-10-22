@@ -1,9 +1,8 @@
 import pandas as pd
-import joblib
+from config import CAT_FEATURES, OHC_PATH, PSP_COSTS
 from sklearn.metrics import roc_auc_score
 
-from config import CAT_FEATURES, PSP_COSTS, OHC_PATH
-from models import calculate_success_probability
+from src.metrics import calculate_success_probability
 
 
 def evaluate_technical_performance(
@@ -75,3 +74,10 @@ def evaluate_business_impact(
     print(f"  Legacy System Cost: {total_cost_legacy:,.2f} €")
     print(f"  Model Strategy Cost: {total_cost_model:,.2f} €")
     print(f"  Savings: {savings:,.2f} € ({savings_percent:.2f}%)")
+
+    def evaluate_business_strategies():
+        """Calculate all scenarios."""
+        pass
+
+    def _get_all_predictions():
+        pass

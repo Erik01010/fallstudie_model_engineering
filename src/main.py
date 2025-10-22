@@ -1,30 +1,27 @@
-from config import (
-    CAT_FEATURES,
-    RAW_DATA_PATH,
-    DECISION_TREE_PATH,
-    HGBOOST_PATH,
-    FINAL_MODEL_PATH,
-    DATA_PATH,
-)
-from features import engineer_features
-from predictions import evaluate_business_impact, evaluate_technical_performance
-from tuning import find_best_hgb_model
-from sklearn.model_selection import train_test_split
 import pandas as pd
-import joblib
+from sklearn.model_selection import train_test_split
 
-from models import (
+from src.config import RAW_DATA_PATH
+from src.features import engineer_features
+from src.predictions import evaluate_business_impact, evaluate_technical_performance
+
+from src.models import (
     train_decision_tree,
-    train_ohc_encoder,
     train_hgboost,
-)  # type: ignore
+    tune_hyperparameters,
+)
+from src.metrics import (
+    get_scores,
+    plot_confusion_matrix,
+    plot_precision_recall_curve,
+    plot_multiple_precision_recall_curves,
+)
 
 
 def run_pipeline() -> None:
     """Main function to run the pipeline."""
     raw_data = pd.read_excel(RAW_DATA_PATH, index_col=0)
-    ohc = train_ohc_encoder(data=raw_data[CAT_FEATURES])
-    processed_data = engineer_features(data=raw_data, ohc=ohc)
+    processed_data, ohc = engineer_features(data=raw_data)
     processed_data.to_csv(
         path_or_buf="processed_data.csv", index=False, encoding="utf-8"
     )
@@ -40,7 +37,7 @@ def run_pipeline() -> None:
     models_to_evaluate = {
         "decision_tree_model": train_decision_tree(x_train=X_train, y_train=y_train),
         "hgboost_model": train_hgboost(x_train=X_train, y_train=y_train),
-        "optimized_hgboost_model": find_best_hgb_model(
+        "optimized_hgboost_model": tune_hyperparameters(
             x_train=X_train, y_train=y_train
         ),
     }
@@ -56,9 +53,11 @@ def run_pipeline() -> None:
     print("\n--- Evaluation complete ---")
 
 
-def run_pre_loaded_model_evaluation():
+def main():
+    """Main function to run the pipeline."""
+    # Load and process data
     raw_data = pd.read_excel(RAW_DATA_PATH, index_col=0)
-    processed_data = pd.read_csv(DATA_PATH, encoding="utf-8")
+    processed_data, ohc = engineer_features(data=raw_data)
 
     # Split features and target
     y = processed_data["success"]
@@ -67,26 +66,32 @@ def run_pre_loaded_model_evaluation():
         X, y, test_size=0.2, random_state=42
     )
 
-    pretrained_models_to_evaluate = {
-        "decision_tree_model": DECISION_TREE_PATH,
-        "hgboost_model": HGBOOST_PATH,
-        "optimized_hgboost_model": FINAL_MODEL_PATH,
+    # Train models
+    dtm = train_decision_tree(x_train=X_train, y_train=y_train)
+    hgbm = train_hgboost(x_train=X_train, y_train=y_train)
+    ohgbm = tune_hyperparameters(x_train=X_train, y_train=y_train)
+    models_to_evaluate = {
+        "decision_tree_model": dtm,
+        "hgboost_model": hgbm,
+        "optimized_hgboost_model": ohgbm,
     }
 
-    print("\n--- Model Evaluation ---")
-    for name, model_path in pretrained_models_to_evaluate.items():
-        print(f"\nEvaluating {name}")
-        print(model_path)
+    # Evaluate models - technical score
+    print("\n--- Model Evaluation Scores ---")
+    for name, model in models_to_evaluate.items():
+        precision, recall, roc_auc, cm = get_scores(
+            name=name, model=model, y_true=y_test, x_test=X_test
+        )
+        print("Model Name:   ", name)
+        print("Precision:    ", round(precision, 4))
+        print("Recall:       ", round(recall, 4))
+        print("ROC-AUC:      ", round(roc_auc, 4))
+        print("\n")
 
-        with open(model_path, "rb") as f:
-            model = joblib.load(f)
-            evaluate_technical_performance(model=model, x_test=X_test, y_test=y_test)
-            evaluate_business_impact(
-                model=model, x_test=X_test, y_test=y_test, original_data=raw_data
-            )
-    print("\n--- Evaluation complete ---")
+    plot_confusion_matrix(x_test=X_test, y_test=y_test, model=ohgbm)
+    plot_multiple_precision_recall_curves(x_test=X_test, y_test=y_test, models=models_to_evaluate)
 
 
 if __name__ == "__main__":
-    # run_pre_loaded_model_evaluation()
-    run_pipeline()
+    main()
+    # run_pipeline()
