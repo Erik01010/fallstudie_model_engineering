@@ -1,83 +1,49 @@
 import pandas as pd
-from config import CAT_FEATURES, OHC_PATH, PSP_COSTS
-from sklearn.metrics import roc_auc_score
+from sklearn.preprocessing import OneHotEncoder
 
-from src.metrics import calculate_success_probability
+from src.config import PSP_COSTS
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.tree import DecisionTreeClassifier
 
-
-def evaluate_technical_performance(
-    model, x_test: pd.DataFrame, y_test: pd.DataFrame
-) -> None:
-    """Evaluates the model on the test set by calculating accuracy."""
-    y_pred_proba = calculate_success_probability(model, x_test)
-    score = roc_auc_score(y_test, y_pred_proba)
-    print(f"ROC AUC Score: {score:.4f}")
+from src.features import engineer_features, create_categorial_features
+from typing import Union
 
 
-def _calculate_actual_costs(choices, y_true) -> float:
-    """
-    Helper function to calculate the total actual cost for a series of PSP choices
-    based on the true transaction outcomes.
-    """
+ModelType = Union[HistGradientBoostingClassifier, DecisionTreeClassifier]
+
+
+def _get_all_predictions(
+    model: ModelType,
+    x_test: pd.DataFrame,
+    original_data: pd.DataFrame,
+    encoder: OneHotEncoder,
+) -> pd.DataFrame:
+    """Predict values for each psp on the test set."""
+    predictions_df = pd.DataFrame()
+    predictions_df["original_psp"] = original_data.loc[x_test.index, "PSP"]
+    for simulated_psp in PSP_COSTS:
+        simulated_data = original_data.loc[x_test.index].copy()
+        simulated_data = simulated_data.drop(columns=["success"], axis=1)
+        simulated_data["PSP"] = simulated_psp
+        simulated_data = create_categorial_features(data=simulated_data)
+        simulated_features = engineer_features(data=simulated_data, encoder=encoder)
+        predictions_psp = model.predict_proba(simulated_features)[:, 1]
+        predictions_df[simulated_psp] = predictions_psp
+    return predictions_df
+
+
+def calculate_strategy_kpis(choices: pd.Series, y_test: pd.Series) -> tuple[float, int]:
+    """Calculate the total actual cost and success rate for a series of PSP choices."""
     total_cost = 0
+    successful_transactions = 0
 
     for index, psp_choice in choices.items():
-        if psp_choice in PSP_COSTS:
-            cost_dict = PSP_COSTS[psp_choice]
-            # Use the true outcome (y_true) to determine the actual cost
-            actual_cost = (
-                cost_dict["success"] if y_true.loc[index] else cost_dict["failure"]
-            )
-            total_cost += actual_cost
-    return total_cost
+        if y_test.loc[index] == 1:
+            successful_transactions += 1
+            total_cost += PSP_COSTS[psp_choice]["success"]
+        else:
+            total_cost += PSP_COSTS[psp_choice]["failure"]
 
+    success_rate = (successful_transactions / len(y_test)) * 100
 
-def evaluate_business_impact(
-    model, x_test: pd.DataFrame, y_test: pd.DataFrame, original_data: pd.DataFrame
-) -> None:
-    """Evaluates and compares the financial outcome of the model's routing strategy
-    against the legacy system's strategy on the test set."""
-    all_model_columns = x_test.columns.tolist()
-    expected_costs_df = pd.DataFrame(index=x_test.index)
-
-    for psp in PSP_COSTS:
-        simulated_features = x_test.copy()
-
-        for col in all_model_columns:
-            if col.startswith("PSP_"):
-                simulated_features[col] = 0
-        simulated_features[f"PSP_{psp}"] = 1
-        simulated_features = simulated_features.reindex(
-            columns=all_model_columns, fill_value=0
-        )
-        prob_success = calculate_success_probability(model, simulated_features)
-
-        expected_costs_df[psp] = (
-            prob_success * PSP_COSTS[psp]["success"]
-            + (1 - prob_success) * PSP_COSTS[psp]["failure"]
-        )
-
-    # Calculate Model Strategy Cost
-    model_choices = expected_costs_df.idxmin(axis=1)
-    total_cost_model = _calculate_actual_costs(model_choices, y_test)
-
-    # Calculate Legacy System Cost
-    legacy_choices = original_data.loc[x_test.index, "PSP"]
-    total_cost_legacy = _calculate_actual_costs(legacy_choices, y_test)
-
-    # Report the Financial Outcome
-    savings = total_cost_legacy - total_cost_model
-    savings_percent = (
-        (savings / total_cost_legacy) * 100 if total_cost_legacy > 0 else 0
-    )
-
-    print(f"  Legacy System Cost: {total_cost_legacy:,.2f} €")
-    print(f"  Model Strategy Cost: {total_cost_model:,.2f} €")
-    print(f"  Savings: {savings:,.2f} € ({savings_percent:.2f}%)")
-
-    def evaluate_business_strategies():
-        """Calculate all scenarios."""
-        pass
-
-    def _get_all_predictions():
-        pass
+    return success_rate, total_cost

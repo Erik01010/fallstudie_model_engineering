@@ -3,13 +3,36 @@ import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 
 from src.config import CAT_FEATURES, CYCLICAL_FEATURES, PSP_COSTS
-from src.models import train_ohc_encoder
 
 
-def engineer_features(data: pd.DataFrame) -> tuple[pd.DataFrame, OneHotEncoder]:
-    """Drop duplicates and generate Features."""
+def create_categorial_features(data: pd.DataFrame) -> pd.DataFrame:
+    """Creates all raw categorical features, including interactions."""
     data = data.copy()
-    data = data.drop_duplicates()
+
+    # Temporären Amount-Bin erstellen
+    data["amount_bins"] = pd.cut(
+        data["amount"],
+        bins=[0, 200, 400, float("inf")],
+        labels=["amount_under_200", "amount_200_400", "amount_over_400"],
+        right=False,
+    )
+
+    # Interaktions-Features erstellen
+    data["interaction_psp_country"] = data["PSP"] + "_" + data["country"]
+    data["interaction_psp_card"] = data["PSP"] + "_" + data["card"]
+    data["interaction_psp_amount_bin"] = (
+        data["PSP"] + "_" + data["amount_bins"].astype(str)
+    )
+    data["interaction_psp_3D_secured"] = (
+        data["PSP"] + "_" + data["3D_secured"].astype(str)
+    )
+
+    return data
+
+
+def engineer_features(data: pd.DataFrame, encoder: OneHotEncoder) -> pd.DataFrame:
+    """Generate Features."""
+    data = data.copy()
 
     # Informationen aus Zeitstempel extrahieren
     data["month"] = data.loc[:, "tmsp"].dt.month.astype("int64")
@@ -50,27 +73,9 @@ def engineer_features(data: pd.DataFrame) -> tuple[pd.DataFrame, OneHotEncoder]:
         lambda x: (x != x.shift()).fillna(False).cumsum() > 0
     )
 
-    data["amount_bins"] = pd.cut(
-        data["amount"],
-        bins=[0, 200, 400, float("inf")],
-        labels=["amount_under_200", "amount_200_400", "amount_over_400"],
-        right=False,
-    )
-
-    # Feature interaktion: PSP und Country
-    data["interaction_psp_country"] = data["PSP"] + "_" + data["country"]
-    data["interaction_psp_card"] = data["PSP"] + "_" + data["card"]
-    data["interaction_psp_amount_bin"] = (
-        data["PSP"] + "_" + data["amount_bins"].astype(str)
-    )
-    data["interaction_psp_3D_secured"] = (
-        data["PSP"] + "_" + data["3D_secured"].astype(str)
-    )
-
     # kategorische Merkmale encodieren
-    ohc = train_ohc_encoder(data=data[CAT_FEATURES])
-    encoded_array = ohc.transform(data[CAT_FEATURES])
-    encoded_columns = ohc.get_feature_names_out(CAT_FEATURES)
+    encoded_array = encoder.transform(data[CAT_FEATURES])
+    encoded_columns = encoder.get_feature_names_out(CAT_FEATURES)
     encoded_df = pd.DataFrame(encoded_array, columns=encoded_columns, index=data.index)
     data = pd.concat([data, encoded_df], axis=1)
 
@@ -78,4 +83,4 @@ def engineer_features(data: pd.DataFrame) -> tuple[pd.DataFrame, OneHotEncoder]:
     cat_features = CAT_FEATURES + ["tmsp"]
     data = data.drop(columns=cat_features, axis=1)
 
-    return (data, ohc)
+    return data

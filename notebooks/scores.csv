@@ -1,0 +1,5 @@
+,model,precision,recall,accuracy,f1,roc-auc
+0,decision_tree_model,0.529,0.052,0.794,0.095,0.656
+1,hgboost_model,0.301,0.743,0.59,0.428,0.682
+2,optimized_hgboost_model,0.301,0.737,0.591,0.427,0.684
+3,optimized_hgboost_model_tres_0_5,0.297,0.748,0.581,0.425,0.684
