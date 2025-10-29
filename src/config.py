@@ -1,15 +1,16 @@
 from pathlib import Path
 
-from scipy.stats import randint, uniform
+from scipy.stats import randint
+from scipy.stats import uniform
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_PATH = BASE_DIR / "data" / "processed_data.csv"
 RAW_DATA_PATH = BASE_DIR / "data" / "data.xlsx"
+DIAGRAMS_PATH = BASE_DIR / "diagrams"
 
-OHC_PATH = BASE_DIR / "models" / "one_hot_encoder.joblib"
 DECISION_TREE_PATH = BASE_DIR / "models" / "decision_tree.joblib"
 HGBOOST_PATH = BASE_DIR / "models" / "hgboost.joblib"
-FINAL_MODEL_PATH = BASE_DIR / "models" / "hgboost_optimized.joblib"
+HGBOOST_OPTIMIZED_PATH = BASE_DIR / "models" / "hgboost_optimized.joblib"
 
 
 CAT_FEATURES = [

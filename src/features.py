@@ -2,11 +2,13 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 
-from src.config import CAT_FEATURES, CYCLICAL_FEATURES, PSP_COSTS
+from src.config import CAT_FEATURES
+from src.config import CYCLICAL_FEATURES
+from src.config import PSP_COSTS
 
 
 def create_categorial_features(data: pd.DataFrame) -> pd.DataFrame:
-    """Creates all raw categorical features, including interactions."""
+    """Create all raw categorical features, including interactions."""
     data = data.copy()
 
     # Temporären Amount-Bin erstellen
@@ -20,12 +22,8 @@ def create_categorial_features(data: pd.DataFrame) -> pd.DataFrame:
     # Interaktions-Features erstellen
     data["interaction_psp_country"] = data["PSP"] + "_" + data["country"]
     data["interaction_psp_card"] = data["PSP"] + "_" + data["card"]
-    data["interaction_psp_amount_bin"] = (
-        data["PSP"] + "_" + data["amount_bins"].astype(str)
-    )
-    data["interaction_psp_3D_secured"] = (
-        data["PSP"] + "_" + data["3D_secured"].astype(str)
-    )
+    data["interaction_psp_amount_bin"] = data["PSP"] + "_" + data["amount_bins"].astype(str)
+    data["interaction_psp_3D_secured"] = data["PSP"] + "_" + data["3D_secured"].astype(str)
 
     return data
 
@@ -57,16 +55,12 @@ def engineer_features(data: pd.DataFrame, encoder: OneHotEncoder) -> pd.DataFram
     # Wiederholte Transaktionsversuche aufgrund fehlgeschlagener Transaktionen
     data["timedelta"] = data["tmsp"].diff().dt.total_seconds().fillna(0).astype("int64")
     cols_to_compare = ["country", "amount", "3D_secured", "card"]
-    data["is_retry"] = (data[cols_to_compare] == data[cols_to_compare].shift(1)).all(
-        axis=1
-    )
+    data["is_retry"] = (data[cols_to_compare] == data[cols_to_compare].shift(1)).all(axis=1)
     data["is_retry"] = data["is_retry"] & (data["timedelta"] <= 60)
 
     # Anzahl kontinuierlicher Retry Versuche
     retry_groups = (~data["is_retry"]).cumsum()
-    data["retry_count"] = (
-        data.groupby(retry_groups)["is_retry"].cumsum().astype("int64")
-    )
+    data["retry_count"] = data.groupby(retry_groups)["is_retry"].cumsum().astype("int64")
 
     # Wechsel PSP bei Retry
     data["PSP_switch"] = data.groupby(retry_groups)["PSP"].transform(
@@ -80,7 +74,5 @@ def engineer_features(data: pd.DataFrame, encoder: OneHotEncoder) -> pd.DataFram
     data = pd.concat([data, encoded_df], axis=1)
 
     # Timestamp und nicht kategorische features entfernen
-    cat_features = CAT_FEATURES + ["tmsp"]
-    data = data.drop(columns=cat_features, axis=1)
-
-    return data
+    cat_features = [*CAT_FEATURES, "tmsp"]
+    return data.drop(columns=cat_features, axis=1)

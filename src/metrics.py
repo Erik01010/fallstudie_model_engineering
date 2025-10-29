@@ -1,23 +1,21 @@
-import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.inspection import permutation_importance
-from sklearn.metrics import (
-    precision_score,
-    recall_score,
-    accuracy_score,
-    f1_score,
-    roc_auc_score,
-    confusion_matrix,
-    ConfusionMatrixDisplay,
-    precision_recall_curve,
-)
+from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import f1_score
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import roc_auc_score
 from sklearn.tree import DecisionTreeClassifier
-import matplotlib.pyplot as plt
-from typing import Union
 
+from src.config import DIAGRAMS_PATH
 
-ModelType = Union[HistGradientBoostingClassifier, DecisionTreeClassifier]
+ModelType = HistGradientBoostingClassifier | DecisionTreeClassifier
 
 
 def get_scores(
@@ -26,7 +24,8 @@ def get_scores(
     y_true: pd.Series,
     x_test: pd.DataFrame,
     threshold: float = 0.5,
-):
+) -> tuple[float, float, float, float, float, any]:
+    """Get scores Accuracy, Precision, Recall, F1, Roc-Auc."""
     y_pred = model.predict(x_test)
     if name == "optimized_hgboost_model":
         y_pred = model.predict_proba(x_test)[:, 1]
@@ -65,7 +64,7 @@ def get_feature_importance(
         n_jobs=-1,
     )
     dtc = models_to_evaluate["decision_tree_model"]
-    perm_importance_df = pd.DataFrame(
+    return pd.DataFrame(
         {
             "Feature": x_test.columns,
             "dtc": dtc.feature_importances_.round(4),
@@ -74,14 +73,13 @@ def get_feature_importance(
         }
     ).set_index("Feature")
 
-    return perm_importance_df
-
 
 def plot_confusion_matrix(
     x_test: pd.DataFrame,
     y_test: pd.Series,
     models: dict[str, ModelType],
 ) -> None:
+    """Plot confusion matrix."""
     num_models = len(models)
     fig, axes = plt.subplots(1, num_models, figsize=(5 * num_models, 5))
     if num_models == 1:
@@ -90,15 +88,13 @@ def plot_confusion_matrix(
     for i, (name, model) in enumerate(models.items()):
         preds = model.predict(x_test)
         cm = confusion_matrix(y_test, preds)
-        disp = ConfusionMatrixDisplay(
-            confusion_matrix=cm, display_labels=display_labels
-        )
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=display_labels)
         disp.plot(ax=axes[i], cmap="Blues")
         disp.ax_.set_title(name)
         disp.ax_.set_ylabel("")
         disp.ax_.set_yticklabels([])
     plt.tight_layout()
-    plt.savefig("../diagrams/confusion_matrix.png")
+    plt.savefig(DIAGRAMS_PATH / "confusion_matrix.png")
     plt.show()
 
 
@@ -121,7 +117,7 @@ def plot_multiple_precision_recall_curves(
     ax.legend()
     ax.grid()
 
-    plt.savefig("../diagrams/precision_recall_comparison.png")
+    plt.savefig(DIAGRAMS_PATH / "precision_recall_comparison.png")
     plt.show()
 
 
@@ -160,8 +156,8 @@ def find_best_f1_threshold(
     plt.ylabel("Precision")
     plt.title("Precision-Recall Kurve mit optimalem F1-Punkt")
     plt.legend()
-    plt.grid(True)
-    plt.savefig("../diagrams/precision_recall_best_f1.png")
+    plt.grid()
+    plt.savefig(DIAGRAMS_PATH / "precision_recall_best_f1.png")
 
     plt.show()
 

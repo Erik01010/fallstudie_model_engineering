@@ -1,36 +1,27 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from src.config import RAW_DATA_PATH, CAT_FEATURES
-from src.features import engineer_features, create_categorial_features
-
-from src.models import (
-    train_ohc_encoder,
-    train_decision_tree,
-    train_hgboost,
-    tune_hyperparameters,
-)
-from src.metrics import (
-    get_scores,
-    plot_confusion_matrix,
-    plot_multiple_precision_recall_curves,
-    find_best_f1_threshold,
-)
+from src.config import CAT_FEATURES
+from src.config import RAW_DATA_PATH
+from src.features import create_categorial_features
+from src.features import engineer_features
+from src.metrics import get_scores
+from src.models import train_decision_tree
+from src.models import train_hgboost
+from src.models import train_ohc_encoder
+from src.models import tune_hyperparameters
+from src.predictions import evaluate_business_strategies
 
 
 def main() -> None:
-    """Main function to run the pipeline."""
+    """Run the pipeline."""
     # Load and process data
     raw_data = pd.read_excel(RAW_DATA_PATH, index_col=0)
-    data = raw_data.drop_duplicates()
+    processed_data = raw_data.drop_duplicates()
     # Split features and target
-    y = data["success"]
-    X = data.drop(columns=["success"], axis=1)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-    y_train = y_train.to_numpy()
-    y_test = y_test.to_numpy()
+    y = processed_data["success"]
+    X = processed_data.drop(columns=["success"], axis=1)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # add categorial features
     X_train = create_categorial_features(data=X_train)
@@ -44,13 +35,14 @@ def main() -> None:
     X_test = engineer_features(data=X_test, encoder=ohc)
 
     # Train models
-    dtm = train_decision_tree(x_train=X_train, y_train=y_train)
-    hgbm = train_hgboost(x_train=X_train, y_train=y_train)
-    ohgbm = tune_hyperparameters(x_train=X_train, y_train=y_train)
+    decision_tree_model = train_decision_tree(x_train=X_train, y_train=y_train)
+    hgboost_model = train_hgboost(x_train=X_train, y_train=y_train)
+    hgboost_optimized_model = tune_hyperparameters(x_train=X_train, y_train=y_train)
+
     models_to_evaluate = {
-        "decision_tree_model": dtm,
-        "hgboost_model": hgbm,
-        "optimized_hgboost_model": ohgbm,
+        "decision_tree_model": decision_tree_model,
+        "hgboost_model": hgboost_model,
+        "optimized_hgboost_model": hgboost_optimized_model,
     }
 
     # Evaluate models - technical score
@@ -72,11 +64,31 @@ def main() -> None:
     scores = pd.DataFrame(scores)
     print(scores)
 
-    plot_confusion_matrix(x_test=X_test, y_test=y_test, models=models_to_evaluate)
-    plot_multiple_precision_recall_curves(
-        x_test=X_test, y_test=y_test, models=models_to_evaluate
+    results_df = evaluate_business_strategies(
+        model=hgboost_optimized_model,
+        x_test=X_test, y_test=y_test,
+        original_data=processed_data,
+        encoder=ohc
     )
-    find_best_f1_threshold(x_test=X_test, y_test=y_test, model=ohgbm)
+    print("--- Strategy evaluation ---")
+    column_order = [
+        "Actual Success Rate",
+        "Avg. Expected Success Rate",
+        "Total Cost",
+    ]
+    print(
+        results_df[column_order].to_string(
+            formatters={
+                "Actual Success Rate": "{:.2f}".format,
+                "Avg. Expected Success Rate": "{:.2f}".format,
+                "Total Cost": "{:,.2f}".format,
+            }
+        )
+    )
+
+    # plot_confusion_matrix(x_test=X_test, y_test=y_test, models=models_to_evaluate)
+    # plot_multiple_precision_recall_curves(x_test=X_test, y_test=y_test, models=models_to_evaluate)
+    # find_best_f1_threshold(x_test=X_test, y_test=y_test, model=hgboost_optimized_model)
 
 
 if __name__ == "__main__":
