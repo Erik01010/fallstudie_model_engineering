@@ -31,9 +31,7 @@ def _get_all_predictions(
 
 
 def _calculate_strategy_kpis(
-        choices: pd.Series,
-        y_test: pd.Series,
-        predictions_df: pd.DataFrame
+    choices: pd.Series, y_test: pd.Series, predictions_df: pd.DataFrame
 ) -> tuple[int, float, float]:
     """Calculate the total actual cost and success rate for a series of PSP choices."""
     total_cost = 0
@@ -51,9 +49,7 @@ def _calculate_strategy_kpis(
         expected_probabilities.append(expected_prob)
 
     success_rate = (successful_transactions / len(y_test)) * 100
-    avg_expected_success_rate = (
-        (sum(expected_probabilities) / len(expected_probabilities)) * 100
-    )
+    avg_expected_success_rate = (sum(expected_probabilities) / len(expected_probabilities)) * 100
 
     return total_cost, success_rate, avg_expected_success_rate
 

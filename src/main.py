@@ -5,6 +5,7 @@ from src.config import CAT_FEATURES
 from src.config import RAW_DATA_PATH
 from src.features import create_categorial_features
 from src.features import engineer_features
+from src.metrics import get_feature_importance
 from src.metrics import get_scores
 from src.models import train_decision_tree
 from src.models import train_hgboost
@@ -64,11 +65,22 @@ def main() -> None:
     scores = pd.DataFrame(scores)
     print(scores)
 
+    # Feature importance
+    feature_importance = get_feature_importance(
+        models_to_evaluate=models_to_evaluate, x_test=X_test, y_test=y_test
+    )
+    feature_importance = feature_importance.sort_values(
+        by="optimized_hgboost_model", ascending=False
+    ).head(10)
+    print(feature_importance)
+
+    # Evaluate business score
     results_df = evaluate_business_strategies(
         model=hgboost_optimized_model,
-        x_test=X_test, y_test=y_test,
+        x_test=X_test,
+        y_test=y_test,
         original_data=processed_data,
-        encoder=ohc
+        encoder=ohc,
     )
     print("--- Strategy evaluation ---")
     column_order = [
@@ -89,6 +101,7 @@ def main() -> None:
     # plot_confusion_matrix(x_test=X_test, y_test=y_test, models=models_to_evaluate)
     # plot_multiple_precision_recall_curves(x_test=X_test, y_test=y_test, models=models_to_evaluate)
     # find_best_f1_threshold(x_test=X_test, y_test=y_test, model=hgboost_optimized_model)
+    # plot_feature_importance(feature_importance)
 
 
 if __name__ == "__main__":

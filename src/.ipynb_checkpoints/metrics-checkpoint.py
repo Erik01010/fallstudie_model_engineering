@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import ConfusionMatrixDisplay
@@ -68,27 +67,11 @@ def get_feature_importance(
     return pd.DataFrame(
         {
             "Feature": x_test.columns,
-            "decision_tree_model": dtc.feature_importances_.round(4),
-            "hgboost_model": result_hgbm.importances_mean.round(4),
-            "optimized_hgboost_model": result_ohgbm.importances_mean.round(4),
+            "dtc": dtc.feature_importances_.round(4),
+            "hgbm": result_hgbm.importances_mean.round(4),
+            "ohgbm": result_ohgbm.importances_mean.round(4),
         }
     ).set_index("Feature")
-
-
-def plot_feature_importance(df: pd.DataFrame) -> None:
-    """Plot feature importance."""
-    plt.figure(figsize=(12, 8))
-    sns.barplot(
-        x="optimized_hgboost_model", y="Feature", data=df, color="#3274A1"
-    )  # Farbschema ähnlich deiner Arbeit
-
-    plt.title("Top 10 Feature Importance - Optimiertes Modell", fontsize=14)
-    plt.xlabel("Abnahme des Scores bei Permutation (Wichtigkeit)", fontsize=12)
-    plt.ylabel("Feature", fontsize=12)
-    plt.grid(axis="x", linestyle="--", alpha=0.7)
-    plt.tight_layout()
-
-    plt.show()
 
 
 def plot_confusion_matrix(
