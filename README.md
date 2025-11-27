@@ -31,12 +31,35 @@ Das Projekt ist wie folgt strukturiert:
 4.  **Modellevaluierung**: Die Modelle werden anhand verschiedener Metriken wie Precision, Recall, F1-Score und ROC AUC bewertet. Zusätzlich wird die Merkmalswichtigkeit berechnet und visualisiert.
 5.  **Simulation von Geschäftsstrategien**: Das Projekt simuliert verschiedene Geschäftsstrategien (kostenoptimiert, erfolgsoptimiert) und vergleicht diese mit dem Altsystem.
 
-## Technologien
+## Voraussetzungen
 
-- Python
+# Technologien
+
+Software
+
+- Python 3.10+
+- poetry
 - pandas
 - scikit-learn
 - matplotlib
 - seaborn
 - Jupyter
-- poetry
+
+### Installation von Poetry
+
+`pip install poetry`
+
+### Projekt installieren und ausführen
+
+Schritt 1 – Repository klonen
+
+`git clone https://github.com/Erik01010/fallstudie_model_engineering`
+
+Zum Pfad navigieren
+
+`cd fallstudie_model_engineering`
+
+Schritt 2 - Abhängigkeiten installieren
+
+`poetry install`
+`poetry env activate`
